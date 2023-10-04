@@ -3,10 +3,11 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -26,12 +27,13 @@ func createDirectory(dirname string) error {
 
 func main() {
 
+	// todo direct warn level to stderr?
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
 	// validate input
 	// basic arg len check
 	// input file exits
 	// input file is not in system root, if it is prompt are you sure?
-
-	// if we exit w/ exit code 1, error should be written to stdout?
 
 	// name := "mkdt - make directory tree"
 	// usage := "mkdt [-d] [-r] [-y] [-f]"
@@ -40,7 +42,7 @@ func main() {
 	interactiveMode := true
 	var inputFilePath string
 	flag.StringVar(&inputFilePath, "f", "", "path to input file")
-	// rootDirectory := flag.String("r", ".", "root directory")
+	// rootDirectory := flag.String("r", "", "root directory")
 	// dryRun := flag.Bool("d", false, "dry run")
 
 	flag.Parse()
@@ -69,7 +71,6 @@ func main() {
 			os.Exit(1)
 		}
 
-		// todo: delete temp file
 		cmd := exec.Command(path, tmpFile.Name())
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
@@ -119,31 +120,53 @@ func main() {
 
 		// Pop items from the stack until we reach the correct indentation level
 		for len(stack) > indentLevel {
+			slog.Debug(
+				"stack pre-pop",
+				"stack", stack,
+				"indentLevel", indentLevel,
+			)
 			stack = stack[:len(stack)-1]
+			slog.Debug(
+				"stack post-pop",
+				"stack", stack,
+				"indentLevel", indentLevel,
+			)
 		}
 
 		// Get the directory or file name from the line
 		name := strings.TrimSpace(line)
 
 		// Join the current stack with the new name to get the full path
-		fullPath := strings.Join(append(stack, name), "/")
+		fullPath := path.Join(append(stack, name)...)
 
-		// Check if the name contains a dot
-		// todo: support hidden files that start with a dot
-		if strings.Contains(name, ".") {
+		// Check if the name contains a dot, skip first character
+		if strings.Contains(name[1:], ".") {
 			err := createFile(fullPath)
 			if err != nil {
-				slog.Info(fmt.Sprintf("Error creating file '%s'", fullPath), "error", err.Error())
+				slog.Debug(
+					"error creating file",
+					"path", fullPath,
+					"error", err.Error(),
+				)
 			} else {
-				slog.Info(fmt.Sprintf("Created file: '%s'\n", fullPath))
+				slog.Debug(
+					"created file",
+					"path", fullPath,
+				)
 			}
 		} else {
-			// Create a directory
 			err := createDirectory(fullPath)
 			if err != nil {
-				slog.Info(fmt.Sprintf("Error creating directory '%s'", fullPath), "error", err.Error())
+				slog.Debug(
+					"error creating directory",
+					"path", fullPath,
+					"error", err.Error(),
+				)
 			} else {
-				slog.Info(fmt.Sprintf("Created directory: %s\n", fullPath))
+				slog.Debug(
+					"created directory",
+					"path", fullPath,
+				)
 			}
 		}
 
@@ -152,6 +175,9 @@ func main() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		slog.Info("Error reading input file", "error", err.Error())
+		slog.Debug(
+			"error reading input file",
+			"error", err.Error(),
+		)
 	}
 }
