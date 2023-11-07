@@ -12,8 +12,7 @@ func TestMain(*testing.T) {
 
 		Things to test
 
-		file name is malitious, e.g. rm*
-
+		file name is malicious, e.g. rm*
 
 		input file does not exist
 		target root directory does not exist
@@ -28,8 +27,9 @@ func TestMain(*testing.T) {
 
 		file can't be parent of directory or another file
 
-		dry run prints as expected
+		line can't start with ..
 
+		dry run prints as expected
 
 	*/
 

@@ -27,25 +27,39 @@ func createDirectory(dirname string) error {
 
 func main() {
 
-	// todo direct warn level to stderr?
-	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+	/*
 
-	// validate input
-	// basic arg len check
-	// input file exits
-	// input file is not in system root, if it is prompt are you sure?
+		todo: input validation
+		- basic arg len check
+		- input file exists
+		- file is not in system root, if it is prompt are you sure?
 
-	// name := "mkdt - make directory tree"
+	*/
+
+	// name := "mkdt"
 	// usage := "mkdt [-d] [-r] [-y] [-f]"
-	// description := ""
+	// description := "make directory tree"
 
 	interactiveMode := true
 	var inputFilePath string
 	flag.StringVar(&inputFilePath, "f", "", "path to input file")
+
 	// rootDirectory := flag.String("r", "", "root directory")
 	// dryRun := flag.Bool("d", false, "dry run")
+	verbose := flag.Bool("v", false, "verbose")
 
 	flag.Parse()
+
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+	logLevel := new(slog.LevelVar)
+	if *verbose {
+		logLevel.Set(slog.LevelDebug)
+	} else {
+		logLevel.Set(slog.LevelInfo)
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	}))
 
 	if inputFilePath != "" {
 		interactiveMode = false
@@ -58,13 +72,13 @@ func main() {
 		tmpDir := os.TempDir()
 		tmpFile, err := os.CreateTemp(tmpDir, "mkdt")
 		if err != nil {
-			slog.Warn("failed to create temp file", "error", err.Error())
+			logger.Warn("failed to create temp file", "error", err.Error())
 			os.Exit(1)
 		}
 
 		path, err := exec.LookPath(editor)
 		if err != nil {
-			slog.Warn(
+			logger.Warn(
 				"failed to look up editor path",
 				"editor", editor,
 				"error", err.Error())
@@ -77,7 +91,7 @@ func main() {
 		cmd.Stderr = os.Stderr
 		err = cmd.Start()
 		if err != nil {
-			slog.Warn(
+			logger.Warn(
 				"failed to start editor",
 				"editor", editor,
 				"path", path,
@@ -86,7 +100,7 @@ func main() {
 		}
 		err = cmd.Wait()
 		if err != nil {
-			slog.Warn(
+			logger.Warn(
 				"editor encountered error",
 				"editor", editor,
 				"path", path,
@@ -98,7 +112,7 @@ func main() {
 
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
-		slog.Warn("error opening input file",
+		logger.Warn("error opening input file",
 			"path", inputFilePath,
 			"error", err.Error())
 
@@ -112,44 +126,44 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Count leading spaces/tabs to determine the indentation level
+		// count leading spaces/tabs to determine the indentation level
 		indentLevel := 0
 		for i := 0; i < len(line) && (line[i] == ' ' || line[i] == '\t'); i++ {
 			indentLevel++
 		}
 
-		// Pop items from the stack until we reach the correct indentation level
+		// pop items from the stack until we reach the correct indentation level
 		for len(stack) > indentLevel {
-			slog.Debug(
+			logger.Debug(
 				"stack pre-pop",
 				"stack", stack,
 				"indentLevel", indentLevel,
 			)
 			stack = stack[:len(stack)-1]
-			slog.Debug(
+			logger.Debug(
 				"stack post-pop",
 				"stack", stack,
 				"indentLevel", indentLevel,
 			)
 		}
 
-		// Get the directory or file name from the line
+		// get the directory or file name from the line
 		name := strings.TrimSpace(line)
 
-		// Join the current stack with the new name to get the full path
+		// join the current stack with the new name to get the full path
 		fullPath := path.Join(append(stack, name)...)
 
-		// Check if the name contains a dot, skip first character
+		// check if the name contains a dot, skip first character
 		if strings.Contains(name[1:], ".") {
 			err := createFile(fullPath)
 			if err != nil {
-				slog.Debug(
+				logger.Debug(
 					"error creating file",
 					"path", fullPath,
 					"error", err.Error(),
 				)
 			} else {
-				slog.Debug(
+				logger.Debug(
 					"created file",
 					"path", fullPath,
 				)
@@ -157,25 +171,25 @@ func main() {
 		} else {
 			err := createDirectory(fullPath)
 			if err != nil {
-				slog.Debug(
+				logger.Debug(
 					"error creating directory",
 					"path", fullPath,
 					"error", err.Error(),
 				)
 			} else {
-				slog.Debug(
+				logger.Debug(
 					"created directory",
 					"path", fullPath,
 				)
 			}
 		}
 
-		// Push the current name onto the stack
+		// push the current name onto the stack
 		stack = append(stack, name)
 	}
 
 	if err := scanner.Err(); err != nil {
-		slog.Debug(
+		logger.Debug(
 			"error reading input file",
 			"error", err.Error(),
 		)

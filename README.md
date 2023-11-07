@@ -2,6 +2,11 @@
 
 make directory tree, a tool for humans.
 
+## build
+
+go build -o mkdt cmd/mkdt/main.go
+mv mkdt /usr/local/bin
+
 ## usage
 
 ### command
@@ -13,6 +18,7 @@ make directory tree, a tool for humans.
 | -f   | input file, use existing input file instead of launching editor |   |   |   |
 | -r   | set target root directory, otherwise default to cwd             |   |   |   |
 | -d   | dry run, print tree instead of making it                        |   |   |   |
+| -v   | verbose, print out exactly whats going on                       |   |   |   |
 
 ### input file
 
@@ -26,19 +32,15 @@ Any whitespace at the head of each line is interpreted as a directory level rela
 
 Example input file
 ```
-dir1
-    file1.txt
-    dir2
-        file2.txt
-        dir3
-            file3.txt
-    dir4
-        file4.txt
-file1.txt
+test
+  test.json
+one
+  test2.json
+  two
+    test.json
 ```
 
 Resulting tree
 ```
-``````
+```
 
-## installation
