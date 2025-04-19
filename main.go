@@ -89,6 +89,9 @@ func buildTree(rootDirPath, inputFilePath string) treeNode {
 
 		line := scanner.Text()
 		name := strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
 		isDir := false
 		if !strings.Contains(name[1:], ".") {
 			isDir = true
